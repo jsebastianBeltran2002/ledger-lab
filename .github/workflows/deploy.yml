@@ -1,5 +1,3 @@
-cat > .github/workflows/deploy.yml <<'EOF'
-# Promueve una misma imagen por los ambientes: primero dev y, si pasa, prod.
 # Se ejecuta a mano: Actions > deploy > Run workflow.
 name: deploy
 
@@ -50,5 +48,3 @@ jobs:
     uses: ./.github/workflows/deploy-env.yml
     with:
       environment: prod
-      image: ${{ needs.image.outputs.ref }}
-EOF
