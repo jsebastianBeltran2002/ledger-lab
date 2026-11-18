@@ -9,6 +9,11 @@ on:
         description: Digest publicado por publish-image (sha256:...)
         required: true
         type: string
+      solo_prod:
+        description: Desplegar solo prod (omite dev). Usar si la suscripcion solo admite 1 environment.
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -33,6 +38,7 @@ jobs:
 
   dev:
     needs: image
+    if: ${{ !inputs.solo_prod }}
     permissions:
       contents: read
       id-token: write # Permite pedir a GitHub el token OIDC que Azure intercambia por acceso.
@@ -43,6 +49,7 @@ jobs:
 
   prod:
     needs: [image, dev]
+    if: ${{ !cancelled() && needs.image.result == 'success' && (needs.dev.result == 'success' || needs.dev.result == 'skipped') }}
     permissions:
       contents: read
       id-token: write
