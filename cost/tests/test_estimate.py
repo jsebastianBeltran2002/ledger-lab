@@ -19,6 +19,7 @@ PRICES = {
     "log_gb_ingested": 2.3,
     "blob_gb_month": 0.02,
     "blob_10k_writes": 0.05,
+    "acr_basic_day": 0.167,
 }
 
 
@@ -153,3 +154,19 @@ def test_unknown_resource_fails_the_gate(tmp_path):
     vm = {"address": "azurerm_linux_virtual_machine.x", "mode": "managed",
           "type": "azurerm_linux_virtual_machine", "values": {}}
     assert run_cli(tmp_path, [vm]) == 1
+
+
+def registry(sku="Basic"):
+    return {"address": "azurerm_container_registry.this", "mode": "managed",
+            "type": "azurerm_container_registry", "values": {"location": "eastus", "sku": sku}}
+
+
+def test_container_registry_basic_is_billed_per_day():
+    lines, unknown = cost.estimate({"dev": plan(registry())}, usage(), book())
+    assert unknown == []
+    assert total(lines) == pytest.approx(30 * 0.167)
+
+
+def test_container_registry_other_sku_has_no_rule():
+    with pytest.raises(cost.PriceNotFound):
+        cost.estimate({"dev": plan(registry("Premium"))}, usage(), book())

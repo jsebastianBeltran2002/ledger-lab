@@ -45,6 +45,11 @@ METERS = {
         "General Purpose Data Stored",
         "1 GB/Month",
     ),
+    "acr_basic_day": (
+        "serviceName eq 'Container Registry' and skuName eq 'Basic'",
+        "Basic Registry Unit",
+        "1/Day",
+    ),
     "kv_10k_operations": (
         "serviceName eq 'Key Vault' and skuName eq 'Standard'",
         "Operations",
@@ -192,6 +197,8 @@ def estimate_plan(name: str, plan: dict, usage: dict, book: PriceBook, grant: di
             storage = usage["state_storage_gb"] * book.price("blob_gb_month", region)
             writes = usage["state_writes_per_month"] / 10_000 * book.price("blob_10k_writes", region)
             lines.append(Line(name, address, storage + writes, f"{usage['state_storage_gb']} GB"))
+        elif kind == "azurerm_container_registry":
+            lines.append(_container_registry(name, address, values, region, book))
         else:
             unknown.append(address)
     return lines, unknown
@@ -216,6 +223,13 @@ def _container_app(env, address, values, usage, region, book, grant) -> Line:
         + consume("requests", requests) / 1e6 * book.price("aca_million_requests", region)
     )
     return Line(env, address, cost, f"{seconds / 3600:.0f} h activas, {requests:,} solicitudes")
+
+
+def _container_registry(env, address, values, region, book) -> Line:
+    sku = values.get("sku", "Basic")
+    if sku != "Basic":
+        raise PriceNotFound(f"Sin regla de precio para el SKU {sku} de Container Registry")
+    return Line(env, address, 30 * book.price("acr_basic_day", region), "SKU Basic, 30 dias")
 
 
 def _azapi_database(env, address, values, usage, region, book) -> Line:
